@@ -24,31 +24,40 @@
 
     <fileSets>
         <fileSet>
-            <includes>
-                <include>README*</include>
-            </includes>
-        </fileSet>
-        <fileSet>
-            <directory>target</directory>
-            <outputDirectory>lib</outputDirectory>
-            <includes>
-                <include>*.jar</include>
-            </includes>
-        </fileSet>
-        <fileSet>
             <directory>conf</directory>
-            <outputDirectory>conf</outputDirectory>
+            <outputDirectory>${pom.artifactId}-${pom.version}/conf</outputDirectory>
             <includes>
                 <include>spark-configs.xml</include>
             </includes>
         </fileSet>
         <fileSet>
             <directory>bin</directory>
-            <outputDirectory>bin</outputDirectory>
+            <outputDirectory>${pom.artifactId}-${pom.version}/bin</outputDirectory>
             <includes>
                 <include>*.sh</include>
             </includes>
         </fileSet>
+        <fileSet>
+            <directory>target/lib</directory>
+            <outputDirectory>${pom.artifactId}-${pom.version}/lib</outputDirectory>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+        </fileSet>
     </fileSets>
 
+    <files>
+        <file>
+            <source>../README.md</source>
+            <outputDirectory>${pom.artifactId}-${pom.version}</outputDirectory>
+            <filtered>true</filtered>
+            <fileMode>644</fileMode>
+        </file>
+        <file>
+            <source>../LICENSE</source>
+            <outputDirectory>${pom.artifactId}-${pom.version}</outputDirectory>
+            <filtered>true</filtered>
+            <fileMode>644</fileMode>
+        </file>
+    </files>
 </assembly>
