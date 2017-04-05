@@ -82,10 +82,6 @@
             <groupId>org.json.wso2</groupId>
             <artifactId>json</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.wso2.orbit.org.antlr</groupId>
-            <artifactId>antlr4-runtime</artifactId>
-        </dependency>
 
         <!-- Dependencies for CSV event simulation begins here-->
         <dependency>
@@ -99,10 +95,6 @@
         <!-- Dependencies for CSV event simulation ends here-->
 
         <!--Dependencies for random event simulation begins here-->
-        <dependency>
-            <groupId>com.github.javafaker</groupId>
-            <artifactId>javafaker</artifactId>
-        </dependency>
         <dependency>
             <groupId>com.github.azakordonets.wso2</groupId>
             <artifactId>fabricator_2.10</artifactId>

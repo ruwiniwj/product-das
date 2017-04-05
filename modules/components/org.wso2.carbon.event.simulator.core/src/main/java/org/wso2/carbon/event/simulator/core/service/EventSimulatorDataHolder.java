@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * EventSimulaorDataHolder referenced through ServiceComponent
  */
 public class EventSimulatorDataHolder {
-    private static final Map<String, EventSimulator> SIMULATOR_MAP = new ConcurrentHashMap<>();
+    private final Map<String, EventSimulator> simulatorMap = new ConcurrentHashMap<>();
     private static EventSimulatorDataHolder instance = new EventSimulatorDataHolder();
     private EventStreamService eventStreamService;
 
@@ -46,8 +46,8 @@ public class EventSimulatorDataHolder {
         return instance;
     }
 
-    public static Map<String, EventSimulator> getSimulatorMap() {
-        return SIMULATOR_MAP;
+    public Map<String, EventSimulator> getSimulatorMap() {
+        return simulatorMap;
     }
 
     public EventStreamService getEventStreamService() {

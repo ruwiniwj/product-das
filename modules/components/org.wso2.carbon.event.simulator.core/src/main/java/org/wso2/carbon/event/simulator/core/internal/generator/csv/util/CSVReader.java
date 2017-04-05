@@ -150,7 +150,14 @@ public class CSVReader {
                         }
                     }
                     String[] eventAttributes = attributes.toArray(new String[streamAttributes.size()]);
-                    event = EventConverter.eventConverter(streamAttributes, eventAttributes, timestamp);
+                    try {
+                        event = EventConverter.eventConverter(streamAttributes, eventAttributes, timestamp);
+                    } catch (EventGenerationException e) {
+                        log.error("Error occurred when generating event using database event " +
+                                "generator to simulate stream '" + streamName + "'. Drop event and create " +
+                                "next event. ", e);
+                        continue;
+                    }
                     break;
                 } else {
                     break;
@@ -232,6 +239,7 @@ public class CSVReader {
                                                                     timestampEndTime) {
         TreeMap<Long, ArrayList<Event>> eventsMap = new TreeMap<>();
         long lineNumber;
+        Event event;
         if (csvParser != null) {
             for (CSVRecord record : csvParser) {
                 lineNumber = csvParser.getCurrentLineNumber();
@@ -254,7 +262,14 @@ public class CSVReader {
                         if (timestampEndTime == -1 || timestamp <= timestampEndTime) {
                             attributes.remove(timestampPosition);
                             String[] eventData = attributes.toArray(new String[streamAttributes.size()]);
-                            Event event = EventConverter.eventConverter(streamAttributes, eventData, timestamp);
+                            try {
+                                event = EventConverter.eventConverter(streamAttributes, eventData, timestamp);
+                            } catch (EventGenerationException e) {
+                                log.error("Error occurred when generating event using database event " +
+                                        "generator to simulate stream '" + streamName + "'. Drop event and create " +
+                                        "next event. ", e);
+                                continue;
+                            }
                             if (!eventsMap.containsKey(timestamp)) {
                                 eventsMap.put(timestamp, new ArrayList<>(Collections.singletonList(event)));
                             } else {

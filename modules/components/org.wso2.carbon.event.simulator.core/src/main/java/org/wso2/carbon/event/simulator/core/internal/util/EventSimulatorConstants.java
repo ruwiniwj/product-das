@@ -43,7 +43,7 @@ public class EventSimulatorConstants {
     //RandomDataSimulation constants
     public static final String EVENT_SIMULATION_TYPE = "simulationType";
     public static final String STREAM_NAME = "streamName";
-    public static final String TIME_INTERVAL = "timeInterval";
+    public static final String TIMESTAMP_INTERVAL = "timestampInterval";
     public static final String ATTRIBUTE_CONFIGURATION = "attributeConfiguration";
     public static final String EXECUTION_PLAN_NAME = "executionPlanName";
 

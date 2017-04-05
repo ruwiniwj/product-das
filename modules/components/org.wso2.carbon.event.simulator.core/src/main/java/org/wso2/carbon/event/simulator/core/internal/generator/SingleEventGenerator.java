@@ -48,6 +48,7 @@ public class SingleEventGenerator {
                 .getStreamAttributes(singleEventConfig.getExecutionPlanName(),
                         singleEventConfig.getStreamName());
         if (streamAttributes == null) {
+            log.error("Execution plan '" + singleEventConfig.getExecutionPlanName() + "' has not been deployed");
             throw new EventGenerationException("Execution plan '" + singleEventConfig.getExecutionPlanName()
                     + "' has not been deployed");
         }
@@ -61,19 +62,19 @@ public class SingleEventGenerator {
          * else, throw an exception
          * */
         if (singleEventConfig.getAttributeValues().length == streamAttributes.size()) {
-            Event event;
+            Event event = null;
             try {
                 event = EventConverter.eventConverter(streamAttributes,
                         singleEventConfig.getAttributeValues(),
                         singleEventConfig.getTimestamp());
-                EventSimulatorDataHolder.getInstance().getEventStreamService().pushEvent(
-                        singleEventConfig.getExecutionPlanName(),
-                        singleEventConfig.getStreamName(), event);
             } catch (EventGenerationException e) {
-                log.error("Error occurred during single event simulation of stream '" +
+                log.error("Event dropped due to an error that occurred during single event simulation of stream '" +
                         singleEventConfig.getStreamName() + "' for configuration '" + singleEventConfig.toString() +
-                        "'. " + e.getMessage(), e);
+                        "'. ", e);
             }
+            EventSimulatorDataHolder.getInstance().getEventStreamService().pushEvent(
+                    singleEventConfig.getExecutionPlanName(),
+                    singleEventConfig.getStreamName(), event);
         } else {
             throw new InsufficientAttributesException("Simulation of stream '" + singleEventConfig
                     .getStreamName() + "' requires " + streamAttributes.size() + " attribute(s). Single" +
@@ -117,9 +118,10 @@ public class SingleEventGenerator {
                             "'. Invalid configuration provided : " + singleEventConfig.toString());
                 }
             } else {
-                throw new InvalidConfigException("Timestamp value is required for single event simulation of stream '"
+                log.warn("Timestamp value is required for single event simulation of stream '"
                         + singleEventConfig.getString(EventSimulatorConstants.STREAM_NAME) + "'. Invalid " +
                         "configuration provided : " + singleEventConfig.toString());
+                timestamp = System.currentTimeMillis();
             }
             Object[] attributeValues;
             if (checkAvailabilityOfArray(singleEventConfig, EventSimulatorConstants.SINGLE_EVENT_DATA)) {

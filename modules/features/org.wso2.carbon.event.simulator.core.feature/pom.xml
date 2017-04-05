@@ -94,14 +94,13 @@
             <artifactId>commons-csv</artifactId>
             <version>${apache.commons.csv.version}</version>
         </dependency>
+        <dependency>
+            <groupId>commons-fileupload</groupId>
+            <artifactId>commons-fileupload</artifactId>
+        </dependency>
         <!-- Dependencies for CSV event simulations ends here-->
 
         <!--Dependencies for random event simulation begins here-->
-        <dependency>
-            <groupId>com.github.javafaker</groupId>
-            <artifactId>javafaker</artifactId>
-            <version>${javafaker.version}</version>
-        </dependency>
         <dependency>
             <groupId>com.github.azakordonets.wso2</groupId>
             <artifactId>fabricator_2.10</artifactId>
@@ -230,6 +229,10 @@
                                 <bundle>
                                     <symbolicName>org.apache.commons.csv</symbolicName>
                                     <version>${apache.commons.csv.version}</version>
+                                </bundle>
+                                <bundle>
+                                    <symbolicName>org.apache.commons.fileupload</symbolicName>
+                                    <version>${apache.commons.fileupload.version}</version>
                                 </bundle>
                                 <bundle>
                                     <symbolicName>com.mysql.jdbc</symbolicName>

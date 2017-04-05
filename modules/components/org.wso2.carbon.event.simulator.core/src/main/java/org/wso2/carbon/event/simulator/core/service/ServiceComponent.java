@@ -38,20 +38,15 @@ import org.wso2.carbon.event.simulator.core.internal.generator.csv.util.FileUplo
 import org.wso2.carbon.event.simulator.core.internal.util.EventSimulatorConstants;
 import org.wso2.carbon.stream.processor.common.EventStreamService;
 import org.wso2.msf4j.Microservice;
-import org.wso2.msf4j.formparam.FileInfo;
-import org.wso2.msf4j.formparam.FormDataParam;
 
-import java.io.InputStream;
+import java.io.File;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.annotation.PreDestroy;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 
@@ -119,7 +114,7 @@ public class ServiceComponent implements Microservice {
     public Response feedSimulation(String simulationConfigDetails)
             throws InvalidConfigException, ValidationFailedException, InsufficientAttributesException {
         EventSimulator simulator = new EventSimulator(simulationConfigDetails);
-        EventSimulatorDataHolder.getSimulatorMap().put(simulator.getUuid(), simulator);
+        EventSimulatorDataHolder.getInstance().getSimulatorMap().put(simulator.getUuid(), simulator);
         executorServices.execute(simulator);
         String jsonString = gson.toJson("Event simulation submitted successfully | uuid : "
                 + simulator.getUuid());
@@ -142,9 +137,9 @@ public class ServiceComponent implements Microservice {
     public Response stop(@PathParam("uuid") String uuid) throws InterruptedException {
         String jsonString;
         //stop event simulation
-        if (EventSimulatorDataHolder.getSimulatorMap().containsKey(uuid)) {
-            EventSimulatorDataHolder.getSimulatorMap().get(uuid).stop();
-            EventSimulatorDataHolder.getSimulatorMap().remove(uuid);
+        if (EventSimulatorDataHolder.getInstance().getSimulatorMap().containsKey(uuid)) {
+            EventSimulatorDataHolder.getInstance().getSimulatorMap().get(uuid).stop();
+            EventSimulatorDataHolder.getInstance().getSimulatorMap().remove(uuid);
             jsonString = gson.toJson("Terminate event simulation | uuid : " + uuid);
         } else {
             jsonString = gson.toJson("No event simulation available under uuid : " + uuid);
@@ -166,8 +161,8 @@ public class ServiceComponent implements Microservice {
     public Response pause(@PathParam("uuid") String uuid) throws InterruptedException {
         String jsonString;
         //pause event simulation
-        if (EventSimulatorDataHolder.getSimulatorMap().containsKey(uuid)) {
-            boolean paused = EventSimulatorDataHolder.getSimulatorMap().get(uuid).pause();
+        if (EventSimulatorDataHolder.getInstance().getSimulatorMap().containsKey(uuid)) {
+            boolean paused = EventSimulatorDataHolder.getInstance().getSimulatorMap().get(uuid).pause();
             if (paused) {
                 jsonString = gson.toJson("Successfully paused event simulation | uuid : " + uuid);
             } else {
@@ -198,8 +193,8 @@ public class ServiceComponent implements Microservice {
          * if yes call resume method of that simulator
          * else, inform the uuid specified does not have an event simulation associated with it
          * */
-        if (EventSimulatorDataHolder.getSimulatorMap().containsKey(uuid)) {
-            boolean resumed = EventSimulatorDataHolder.getSimulatorMap().get(uuid).resume();
+        if (EventSimulatorDataHolder.getInstance().getSimulatorMap().containsKey(uuid)) {
+            boolean resumed = EventSimulatorDataHolder.getInstance().getSimulatorMap().get(uuid).resume();
             if (resumed) {
                 jsonString = gson.toJson("Successfully resumed event simulation | uuid : " + uuid);
             } else {
@@ -218,10 +213,7 @@ public class ServiceComponent implements Microservice {
      * http://localhost:9090/simulation/files/upload
      * This function use FormDataParam annotation. WSO@2 MSF4J supports this annotation and multipart/form-data
      * content type.
-     *
-     * @param fileInfo        FileInfo bean to hold the filename and the content type attributes of the particular
-     *                        InputStream
-     * @param fileInputStream InputStream of the file
+     * @param fileLocation location of file being uploaded
      * @return Response
      * @throws ValidationFailedException  throw exception if csv file validation failure
      * @throws FileAlreadyExistsException if the file exists in 'temp/eventSimulator' directory
@@ -230,17 +222,36 @@ public class ServiceComponent implements Microservice {
      */
     @POST
     @Path("/files/add")
-    @Consumes(MediaType.MULTIPART_FORM_DATA)
-    public Response uploadFile(@FormDataParam("file") FileInfo fileInfo,
-                               @FormDataParam("file") InputStream fileInputStream)
+    public Response uploadFile(String fileLocation)
             throws FileAlreadyExistsException, ValidationFailedException, FileOperationsException {
-        String jsonString;
         FileUploader fileUploader = FileUploader.getFileUploaderInstance();
-        fileUploader.uploadFile(fileInfo, fileInputStream);
-        jsonString = gson.toJson("Successfully uploaded file \'" + fileInfo.getFileName() + "\'");
+        String fileName = new File(fileLocation).getName();
+        fileUploader.uploadFile(fileName, fileLocation);
+        String jsonString = gson.toJson("Successfully uploaded file \'" + fileName + "\'");
         return Response.ok().entity(jsonString).build();
     }
 
+//@POST
+//    @Path("/files/add")
+//    @Consumes(MediaType.MULTIPART_FORM_DATA)
+//    public Response uploadFile(@FormDataParam("file") FileInfo fileInfo,
+//                               @FormDataParam("file") InputStream fileInputStream)
+//            throws FileAlreadyExistsException, ValidationFailedException, FileOperationsException {
+//        String jsonString;
+//        ValidatedInputStream validatedInputStream;
+//        try {
+//            validatedInputStream = new ValidatedInputStream(fileInputStream, 10485760);
+//        } catch (SimulatorInitializationException e) {
+//            throw new FileOperationsException("Error occurred when uploading file '" + fileInfo.getFileName() +
+// "'. " +
+//                    e.getMessage(), e);
+//        }
+//        FileUploader fileUploader = FileUploader.getFileUploaderInstance();
+//        fileUploader.uploadFile(fileInfo, validatedInputStream);
+//        jsonString = gson.toJson("Successfully uploaded file \'" + fileInfo.getFileName() + "\'");
+//        return Response.ok().entity(jsonString).build();
+//    }
+//
 
     /**
      * Delete the file
@@ -285,6 +296,7 @@ public class ServiceComponent implements Microservice {
      */
     @Deactivate
     protected void stop() throws Exception {
+        EventSimulatorDataHolder.getInstance().getSimulatorMap().forEach((s, simulator) -> simulator.stop());
         log.info("Simulator service component is deactivated");
     }
 

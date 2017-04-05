@@ -81,6 +81,9 @@ public class RandomEventGenerator implements EventGenerator {
          * exception
          * */
         if (streamAttributes == null) {
+            log.error("Error occurred when initializing random event generator to simulate stream '" +
+                    randomSimulationConfig.getStreamName() + "'. Execution plan '" + randomSimulationConfig
+                    .getExecutionPlanName() + "' has not been deployed.");
             throw new SimulatorInitializationException("Error occurred when initializing random event "
                     + "generator to simulate stream '" + randomSimulationConfig.getStreamName()
                     + "'. Execution plan '" + randomSimulationConfig.getExecutionPlanName() +
@@ -92,6 +95,9 @@ public class RandomEventGenerator implements EventGenerator {
          * else, throw an exception
          * */
         if (randomAttrGenerators.size() != streamAttributes.size()) {
+            log.error("Stream '" + randomSimulationConfig.getStreamName() + "' has "
+                    + streamAttributes.size() + " attribute(s) but random simulation configuration contains " +
+                    "attribute configuration for only " + randomAttrGenerators.size() + " attribute(s).");
             throw new InsufficientAttributesException("Stream '" + randomSimulationConfig.getStreamName() + "' has "
                     + streamAttributes.size() + " attribute(s) but random simulation configuration contains " +
                     "attribute configuration for only " + randomAttrGenerators.size() + " attribute(s).");
@@ -262,13 +268,14 @@ public class RandomEventGenerator implements EventGenerator {
         randomSimulationDTO.setExecutionPlanName(sourceConfig
                 .getString(EventSimulatorConstants.EXECUTION_PLAN_NAME));
         /**
-         * if the user doesn't specify a time interval for random event generation, take 1 second as the default time
+         * if the user doesn't specify a timestamp interval for random event generation, take 1 second as the default
+         * time
          * interval
          * */
-        if (checkAvailability(sourceConfig, EventSimulatorConstants.TIME_INTERVAL)) {
-            long timeInterval = sourceConfig.getLong(EventSimulatorConstants.TIME_INTERVAL);
-            if (timeInterval > 0) {
-                randomSimulationDTO.setTimeInterval(timeInterval);
+        if (checkAvailability(sourceConfig, EventSimulatorConstants.TIMESTAMP_INTERVAL)) {
+            long timestampInterval = sourceConfig.getLong(EventSimulatorConstants.TIMESTAMP_INTERVAL);
+            if (timestampInterval > 0) {
+                randomSimulationDTO.setTimeInterval(timestampInterval);
             } else {
                 throw new InvalidConfigException("Time interval between timestamps of 2 consecutive events must be " +
                         "a positive value.");

@@ -116,6 +116,9 @@ public class DatabaseEventGenerator implements EventGenerator {
                         dbSimulationConfig.getDataSourceLocation(), dbSimulationConfig.getUsername(),
                         dbSimulationConfig.getPassword());
             } else {
+                log.error("Simulation of stream '" +
+                        dbSimulationConfig.getStreamName() + "' requires " + streamAttributes.size() + " " +
+                        "attributes. Number of columns specified is " + columnNames.size() + "'. ");
                 throw new InsufficientAttributesException("Simulation of stream '" +
                         dbSimulationConfig.getStreamName() + "' requires " + streamAttributes.size() + " " +
                         "attributes. Number of columns specified is " + columnNames.size() + "'. ");
@@ -125,6 +128,9 @@ public class DatabaseEventGenerator implements EventGenerator {
                         dbSimulationConfig.getStreamName() + "'.");
             }
         } else {
+            log.error("Error occurred when initializing database event generator to simulate stream '" +
+                    dbSimulationConfig.getStreamName() + "'. Execution plan '" + dbSimulationConfig
+                    .getExecutionPlanName() + "' has not been deployed.");
             throw new SimulatorInitializationException("Error occurred when initializing database event "
                     + "generator to simulate stream '" + dbSimulationConfig.getStreamName()
                     + "'. Execution plan '" + dbSimulationConfig.getExecutionPlanName() +
@@ -230,7 +236,7 @@ public class DatabaseEventGenerator implements EventGenerator {
                         timestamp = resultSet.getLong(dbSimulationConfig.getTimestampAttribute());
                     } else {
                         timestamp = currentTimestamp;
-                        currentTimestamp += dbSimulationConfig.getTimeInterval();
+                        currentTimestamp += dbSimulationConfig.getTimestampInterval();
                     }
                     int i = 0;
                     /**
@@ -270,8 +276,9 @@ public class DatabaseEventGenerator implements EventGenerator {
             throw new EventGenerationException("Error occurred when accessing result set to simulate to simulate " +
                     "stream '" + dbSimulationConfig.getStreamName() + "'. ", e);
         } catch (EventGenerationException e) {
-            log.error("Drop even and create next event. Error occurred when generating event using database event " +
-                    "generator to simulate stream '" + dbSimulationConfig.getStreamName() + "'. ", e);
+            log.error("Error occurred when generating event using database event " +
+                    "generator to simulate stream '" + dbSimulationConfig.getStreamName() + "'. Drop event " +
+                    "and create next event. ", e);
             getNextEvent();
         }
     }
@@ -349,19 +356,19 @@ public class DatabaseEventGenerator implements EventGenerator {
                     sourceConfig.toString());
         }
         /**
-         * either a timestamp attribute must be specified or the timeInterval between timestamps of 2 consecutive
+         * either a timestamp attribute must be specified or the timestampInterval between timestamps of 2 consecutive
          * events must be specified.
          * if time interval is specified the timestamp of the first event will be the timestampStartTime and
          * consecutive event will have timestamp = last timestamp + time interval
          * if both timestamp attribute and time interval are not specified set timestamp interval to 1 second
          * */
         String timestampAttribute = null;
-        long timeInterval = -1;
+        long timestampInterval = -1;
         if (checkAvailability(sourceConfig, EventSimulatorConstants.TIMESTAMP_ATTRIBUTE)) {
             timestampAttribute = sourceConfig.getString(EventSimulatorConstants.TIMESTAMP_ATTRIBUTE);
-        } else if (checkAvailability(sourceConfig, EventSimulatorConstants.TIME_INTERVAL)) {
-            timeInterval = sourceConfig.getLong(EventSimulatorConstants.TIME_INTERVAL);
-            if (timeInterval < 0) {
+        } else if (checkAvailability(sourceConfig, EventSimulatorConstants.TIMESTAMP_INTERVAL)) {
+            timestampInterval = sourceConfig.getLong(EventSimulatorConstants.TIMESTAMP_INTERVAL);
+            if (timestampInterval < 0) {
                 throw new InvalidConfigException("Time interval must be a positive value for database " +
                         "simulation of stream '" + sourceConfig.getString(EventSimulatorConstants.STREAM_NAME) +
                         "'. Invalid source configuration : " + sourceConfig.toString());
@@ -370,7 +377,7 @@ public class DatabaseEventGenerator implements EventGenerator {
             log.warn("Either timestamp end time or time interval is required for database simulation of stream '" +
                     sourceConfig.getString(EventSimulatorConstants.STREAM_NAME) + "'. Time interval will " +
                     "be set to 1 second for source configuration : " + sourceConfig.toString());
-            timeInterval = 1000;
+            timestampInterval = 1000;
         }
         /**
          * insert the specified column names into a list and set it to database configuration
@@ -413,7 +420,7 @@ public class DatabaseEventGenerator implements EventGenerator {
         dbSimulationDTO.setPassword(sourceConfig.getString(EventSimulatorConstants.PASSWORD));
         dbSimulationDTO.setTableName(sourceConfig.getString(EventSimulatorConstants.TABLE_NAME));
         dbSimulationDTO.setTimestampAttribute(timestampAttribute);
-        dbSimulationDTO.setTimeInterval(timeInterval);
+        dbSimulationDTO.setTimestampInterval(timestampInterval);
         dbSimulationDTO.setColumnNames(columns);
         return dbSimulationDTO;
     }
