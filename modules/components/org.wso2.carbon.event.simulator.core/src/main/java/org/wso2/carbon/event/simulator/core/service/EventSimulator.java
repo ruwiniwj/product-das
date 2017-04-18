@@ -38,7 +38,6 @@ import static org.wso2.carbon.event.simulator.core.internal.util.CommonOperation
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * EventSimulator starts the simulation execution for single Event and
@@ -50,19 +49,20 @@ public class EventSimulator implements Runnable {
     private volatile boolean isStopped = false;
     private List<EventGenerator> generators = new ArrayList<>();
     private SimulationPropertiesDTO simulationProperties;
-    private String uuid;
+    private String simulationName;
 
 
     /**
-     * EventSimulator() constructor initializes an EventSimulator object and assigns it an UUID
+     * EventSimulator() constructor initializes an EventSimulator object
      *
+     * @param simulationName unique identifies of simulation
      * @param simulationConfiguration a string containing the simulation configuration
      * @throws InsufficientAttributesException is a configuration does not produce data for all stream attributes
      * @throws InvalidConfigException          if the simulation configuration is invalid
      */
-    public EventSimulator(String simulationConfiguration)
+    public EventSimulator(String simulationName, String simulationConfiguration)
             throws InsufficientAttributesException, InvalidConfigException {
-        uuid = UUID.randomUUID().toString();
+        this.simulationName = simulationName;
         JSONObject simulationConfig = new JSONObject(simulationConfiguration);
 //        first create a simulation properties object
         if (simulationConfig.has(EventSimulatorConstants.EVENT_SIMULATION_PROPERTIES)
@@ -77,7 +77,7 @@ public class EventSimulator implements Runnable {
                 EventGeneratorFactoryImpl generatorFactory = new EventGeneratorFactoryImpl();
                 for (int i = 0; i < streamConfig.length(); i++) {
                     generators.add(generatorFactory.getEventGenerator(streamConfig.getJSONObject(i),
-                            simulationProperties.getTimestampStartTime(), simulationProperties.getTimestampEndTime()));
+                            simulationProperties.getStartTimestamp(), simulationProperties.getEndTimestamp()));
                 }
             } else {
                 throw new InvalidConfigException("Source configuration is required for event simulation '" +
@@ -138,7 +138,7 @@ public class EventSimulator implements Runnable {
                         }
                     }
                     if (minTimestamp >= 0L && generator != null) {
-                        log.info("Input Event (" + uuid + ") : "
+                        log.info("Input Event (" + simulationName + ") : "
                                 + Arrays.deepToString(generator.peek().getData()));
                         EventSimulatorDataHolder.getInstance().getEventStreamService()
                                 .pushEvent(generator.getExecutionPlanName(), generator.getStreamName(),
@@ -208,13 +208,13 @@ public class EventSimulator implements Runnable {
              * timestamp value
              * */
             long timestampStartTime;
-            if (simulationPropertiesConfig.has(EventSimulatorConstants.TIMESTAMP_START_TIME)) {
-                if (simulationPropertiesConfig.isNull(EventSimulatorConstants.TIMESTAMP_START_TIME)) {
+            if (simulationPropertiesConfig.has(EventSimulatorConstants.START_TIMESTAMP)) {
+                if (simulationPropertiesConfig.isNull(EventSimulatorConstants.START_TIMESTAMP)) {
                     timestampStartTime = System.currentTimeMillis();
-                } else if (!simulationPropertiesConfig.getString(EventSimulatorConstants.TIMESTAMP_START_TIME)
+                } else if (!simulationPropertiesConfig.getString(EventSimulatorConstants.START_TIMESTAMP)
                         .isEmpty()) {
                     timestampStartTime = simulationPropertiesConfig
-                            .getLong(EventSimulatorConstants.TIMESTAMP_START_TIME);
+                            .getLong(EventSimulatorConstants.START_TIMESTAMP);
                     if (timestampStartTime < 0) {
                         throw new InvalidConfigException("TimestampStartTime must be a positive value for simulation " +
                                 "'" + simulationPropertiesConfig.getString(EventSimulatorConstants
@@ -240,12 +240,12 @@ public class EventSimulator implements Runnable {
              * */
             long timestampEndTime = -1;
             int noOfEventsRequired = -1;
-            if (simulationPropertiesConfig.has(EventSimulatorConstants.TIMESTAMP_END_TIME)) {
-                if (simulationPropertiesConfig.isNull(EventSimulatorConstants.TIMESTAMP_END_TIME)) {
+            if (simulationPropertiesConfig.has(EventSimulatorConstants.END_TIMESTAMP)) {
+                if (simulationPropertiesConfig.isNull(EventSimulatorConstants.END_TIMESTAMP)) {
                     timestampEndTime = -1;
-                } else if (!simulationPropertiesConfig.getString(EventSimulatorConstants.TIMESTAMP_END_TIME)
+                } else if (!simulationPropertiesConfig.getString(EventSimulatorConstants.END_TIMESTAMP)
                         .isEmpty()) {
-                    timestampEndTime = simulationPropertiesConfig.getLong(EventSimulatorConstants.TIMESTAMP_END_TIME);
+                    timestampEndTime = simulationPropertiesConfig.getLong(EventSimulatorConstants.END_TIMESTAMP);
                     if (timestampEndTime < 0) {
                         throw new InvalidConfigException("TimestampEndTime must be a positive value for simulation " +
                                 "'" + simulationPropertiesConfig.getString(EventSimulatorConstants
@@ -292,8 +292,8 @@ public class EventSimulator implements Runnable {
             simulationPropertiesDTO.setSimulationName(simulationPropertiesConfig
                     .getString(EventSimulatorConstants.EVENT_SIMULATION_NAME));
             simulationPropertiesDTO.setTimeInterval(timeInterval);
-            simulationPropertiesDTO.setTimestampStartTime(timestampStartTime);
-            simulationPropertiesDTO.setTimestampEndTime(timestampEndTime);
+            simulationPropertiesDTO.setStartTimestamp(timestampStartTime);
+            simulationPropertiesDTO.setEndTimestamp(timestampEndTime);
             simulationPropertiesDTO.setNoOfEventsRequired(noOfEventsRequired);
             return simulationPropertiesDTO;
         } catch (JSONException e) {
@@ -316,10 +316,12 @@ public class EventSimulator implements Runnable {
      */
     @Override
     public void run() {
+        isPaused = false;
+        isStopped = false;
         try {
             generators.forEach(EventGenerator::start);
             if (log.isDebugEnabled()) {
-                log.debug("Event generators started. Begin event simulation for uuid : " + uuid);
+                log.debug("Event generators started. Begin event simulation of '" + simulationName + "'");
             }
         } catch (SimulatorInitializationException e) {
             /**
@@ -340,11 +342,12 @@ public class EventSimulator implements Runnable {
      * @see EventGenerator#stop()
      */
     public synchronized void stop() {
-        isStopped = true;
-        generators.forEach(EventGenerator::stop);
-        EventSimulatorDataHolder.getInstance().getSimulatorMap().remove(uuid);
-        if (log.isDebugEnabled()) {
-            log.debug("Stop event simulation for uuid : " + uuid);
+        if (!isStopped()) {
+            isStopped = true;
+            generators.forEach(EventGenerator::stop);
+            if (log.isDebugEnabled()) {
+                log.debug("Stop simulation '" + simulationName + "'");
+            }
         }
     }
 
@@ -354,20 +357,12 @@ public class EventSimulator implements Runnable {
      *
      * @see ServiceComponent#pause(String)
      */
-    public synchronized boolean pause() {
-        /*
-         * check whether the simulation is running.
-         * if yes, pause and return true to indicate that simulation was successfully paused.
-         * else return false to indicate that the simulation is already paused
-         * */
+    public synchronized void pause() {
         if (!isPaused) {
             isPaused = true;
             if (log.isDebugEnabled()) {
-                log.debug("Pause event simulation for uuid : " + uuid);
+                log.debug("Pause event simulation '" + simulationName + "'");
             }
-            return true;
-        } else {
-            return false;
         }
     }
 
@@ -377,33 +372,44 @@ public class EventSimulator implements Runnable {
      *
      * @see ServiceComponent#resume(String)
      */
-    public synchronized boolean resume() {
-        /*
-         * check whether the simulation is paused
-         * if yes resume and return true to indicate that the simulation was resumed
-         * else, return false to inform that the resume is not paused and is currently in progress
-         * */
+    public synchronized void resume() {
         if (isPaused) {
             isPaused = false;
             notifyAll();
             if (log.isDebugEnabled()) {
-                log.debug("Resume event simulation for uuid : " + uuid);
+                log.debug("Resume event simulation '" + simulationName + "'");
             }
-            return true;
-        } else {
-            return false;
         }
     }
 
+    /**
+     * isPaused() is used to check whether a simulation is paused or not
+     *
+     * return true of simulation is paused else return false
+     * */
+    public boolean isPaused() {
+        return isPaused;
+    }
+    /**
+     * isStopped() is used to check whether a simulation is stopped or not
+     *
+     * return true of simulation is stopped else return false
+     * */
+    public boolean isStopped() {
+        return isStopped;
+    }
+    /**
+     * getSimulationName() is required to retrieve the simulation name of the simulation when pausing, resuming and
+     * stopping simulations
+     *
+     * @return simulation name
+     * */
+    public String getSimulationName() {
+        return simulationProperties.getSimulationName();
+    }
 
     /**
-     * getUuid() is used to retrieve the UUID of the event simulator when be adding the simulator to the
-     * EventSimulatorMap in ServiceComponent
-     *
-     * @return uuid of event simulator
-     * @see ServiceComponent#feedSimulation(String)
-     */
-    public String getUuid() {
-        return uuid;
-    }
+     * Action class specifies the possible actions user can take for a given simulation
+     * */
+    public enum Action { RUN, PAUSE, RESUME, STOP}
 }

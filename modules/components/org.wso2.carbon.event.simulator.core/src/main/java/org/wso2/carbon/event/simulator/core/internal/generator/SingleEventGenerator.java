@@ -62,19 +62,21 @@ public class SingleEventGenerator {
          * else, throw an exception
          * */
         if (singleEventConfig.getAttributeValues().length == streamAttributes.size()) {
-            Event event = null;
             try {
-                event = EventConverter.eventConverter(streamAttributes,
+                Event event = EventConverter.eventConverter(streamAttributes,
                         singleEventConfig.getAttributeValues(),
                         singleEventConfig.getTimestamp());
+                EventSimulatorDataHolder.getInstance().getEventStreamService().pushEvent(
+                        singleEventConfig.getExecutionPlanName(),
+                        singleEventConfig.getStreamName(), event);
             } catch (EventGenerationException e) {
                 log.error("Event dropped due to an error that occurred during single event simulation of stream '" +
                         singleEventConfig.getStreamName() + "' for configuration '" + singleEventConfig.toString() +
                         "'. ", e);
+                throw new EventGenerationException("Event dropped due to an error that occurred during single event " +
+                        "simulation of stream '" + singleEventConfig.getStreamName() + "' for configuration '" +
+                        singleEventConfig.toString() + "'. ", e);
             }
-            EventSimulatorDataHolder.getInstance().getEventStreamService().pushEvent(
-                    singleEventConfig.getExecutionPlanName(),
-                    singleEventConfig.getStreamName(), event);
         } else {
             throw new InsufficientAttributesException("Simulation of stream '" + singleEventConfig
                     .getStreamName() + "' requires " + streamAttributes.size() + " attribute(s). Single" +
@@ -123,10 +125,11 @@ public class SingleEventGenerator {
                         "configuration provided : " + singleEventConfig.toString());
                 timestamp = System.currentTimeMillis();
             }
-            Object[] attributeValues;
+            ArrayList dataValues;
             if (checkAvailabilityOfArray(singleEventConfig, EventSimulatorConstants.SINGLE_EVENT_DATA)) {
-                attributeValues = (new Gson().fromJson(singleEventConfig.getJSONArray(EventSimulatorConstants
-                        .SINGLE_EVENT_DATA).toString(), ArrayList.class)).toArray();
+
+                dataValues = new Gson().fromJson(singleEventConfig.getJSONArray(EventSimulatorConstants
+                        .SINGLE_EVENT_DATA).toString(), ArrayList.class);
             } else {
                 throw new InvalidConfigException("Single event simulation requires a attribute value for " +
                         "stream '" + singleEventConfig.getString(EventSimulatorConstants.STREAM_NAME) + "'. Invalid " +
@@ -137,7 +140,7 @@ public class SingleEventGenerator {
             singleEventSimulationDTO.setExecutionPlanName(singleEventConfig
                     .getString(EventSimulatorConstants.EXECUTION_PLAN_NAME));
             singleEventSimulationDTO.setTimestamp(timestamp);
-            singleEventSimulationDTO.setAttributeValues(attributeValues);
+            singleEventSimulationDTO.setAttributeValues(dataValues.toArray());
             return singleEventSimulationDTO;
         } catch (JSONException e) {
             log.error("Error occurred when accessing stream configuration. ", e);

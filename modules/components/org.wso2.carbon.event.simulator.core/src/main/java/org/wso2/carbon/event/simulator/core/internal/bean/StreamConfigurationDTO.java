@@ -67,5 +67,12 @@ public abstract class StreamConfigurationDTO {
     public void setTimestampInterval(long timestampInterval) {
         this.timestampInterval = timestampInterval;
     }
+
+    public String getStreamConfiguration() {
+        return "\n stream name : " + streamName +
+            "\n execution plan name : " + executionPlanName +
+            "\n timestamp attribute : " + timestampAttribute +
+            "\n timestamp interval : " + timestampInterval;
+    }
 }
 

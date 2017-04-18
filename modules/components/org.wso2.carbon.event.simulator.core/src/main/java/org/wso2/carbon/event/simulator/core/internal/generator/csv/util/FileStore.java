@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
  * @see FileUploader
  */
 public class FileStore {
-
     private static final Logger log = LoggerFactory.getLogger(FileStore.class);
     private static final FileStore fileStore = new FileStore();
     /**
@@ -94,9 +93,6 @@ public class FileStore {
      *
      * @param filename name of file uploaded
      */
-//    public void addFile(FileInfo fileInfo) {
-//        fileNameList.add(fileInfo.getFileName());
-//    }
     public void addFile(String filename) {
         fileNameList.add(filename);
     }

@@ -120,14 +120,12 @@ public class CSVEventGenerator implements EventGenerator {
          * and assign the first event of the least timestamp as the nextEvent of the generator
          * */
         if (csvConfiguration.getIsOrdered()) {
-            nextEvent = csvReader.getNextEvent(csvConfiguration.getStreamName(), streamAttributes,
-                    csvConfiguration.getDelimiter(), Integer.parseInt(csvConfiguration.getTimestampAttribute()),
-                    csvConfiguration.getTimestampInterval(), timestampStartTime, timestampEndTime);
+            nextEvent = csvReader.getNextEvent(csvConfiguration, streamAttributes, timestampStartTime,
+                    timestampEndTime);
         } else {
             currentTimestampEvents = new ArrayList<>();
             eventsMap = new TreeMap<>();
-            eventsMap = csvReader.getEventsMap(csvConfiguration.getDelimiter(), csvConfiguration.getStreamName(),
-                    streamAttributes, Integer.parseInt(csvConfiguration.getTimestampAttribute()), timestampStartTime,
+            eventsMap = csvReader.getEventsMap(csvConfiguration, streamAttributes, timestampStartTime,
                     timestampEndTime);
             currentTimestampEvents = eventsMap.pollFirstEntry().getValue();
             nextEvent = currentTimestampEvents.get(0);
@@ -145,7 +143,7 @@ public class CSVEventGenerator implements EventGenerator {
      */
     @Override
     public void stop() {
-        csvReader.closeParser(csvConfiguration.getIsOrdered());
+        csvReader.closeParser(csvConfiguration.getFileName(), csvConfiguration.getIsOrdered());
         if (log.isDebugEnabled()) {
             log.debug("Stop CSV generator for file '" + csvConfiguration.getFileName() + "' for stream '" +
                     csvConfiguration.getStreamName() + "'.");
@@ -216,9 +214,8 @@ public class CSVEventGenerator implements EventGenerator {
          * else, assign the next event with current timestamp as nextEvent of generator
          */
         if (csvConfiguration.getIsOrdered()) {
-            nextEvent = csvReader.getNextEvent(csvConfiguration.getStreamName(), streamAttributes,
-                    csvConfiguration.getDelimiter(), Integer.parseInt(csvConfiguration.getTimestampAttribute()),
-                    csvConfiguration.getTimestampInterval(), timestampStartTime, timestampEndTime);
+            nextEvent = csvReader.getNextEvent(csvConfiguration, streamAttributes, timestampStartTime,
+                    timestampEndTime);
         } else {
             getNextEventForCurrentTimestamp();
         }
@@ -382,5 +379,10 @@ public class CSVEventGenerator implements EventGenerator {
         csvSimulationConfig.setDelimiter((String) sourceConfig.get(EventSimulatorConstants.DELIMITER));
         csvSimulationConfig.setIsOrdered(isOrdered);
         return csvSimulationConfig;
+    }
+
+    @Override
+    public String toString() {
+        return csvConfiguration.toString();
     }
 }
